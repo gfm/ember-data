@@ -49,17 +49,28 @@ DS.ActiveModelSerializer = DS.RESTSerializer.extend({
   serializeHasMany: function(record, json, relationship) {
     var key   = relationship.key,
         attrs = get(this, 'attrs'),
-        embed = attrs && attrs[key] && attrs[key].embedded === 'always';
+        embed = attrs && attrs[key] && attrs[key].embedded === 'always',
+        primaryKey = get(this, 'primaryKey');
+        self = this;
 
     if (embed) {
-      json[this.keyForAttribute(key)] = get(record, key).map(function(relation) {
-        var data = relation.serialize(),
-            primaryKey = get(this, 'primaryKey');
+      var relations = get(record, key).toArray();
 
-        data[primaryKey] = get(relation, primaryKey);
+      return Ember.RSVP.all(relations.map(function(relation) {
+        return new Ember.RSVP.Promise(function(resolve, reject) {
+          setTimeout(function() {
+            relation.serialize().then(resolve, reject);
+          }, 0);
+        });
+      })).then(function(serialized) {
+        json[self.keyForAttribute(key)] = serialized.map(function(payload, index) {
+          payload[primaryKey] = get(relations[index], primaryKey);
 
-        return data;
-      }, this);
+          return payload;
+        });
+      });
+    } else {
+      return Ember.RSVP.resolve();
     }
   },
 
@@ -73,8 +84,16 @@ DS.ActiveModelSerializer = DS.RESTSerializer.extend({
     @param {Object} options
   */
   serializeIntoHash: function(data, type, record, options) {
-    var root = Ember.String.decamelize(type.typeKey);
-    data[root] = this.serialize(record, options);
+    var root = Ember.String.decamelize(type.typeKey),
+        self = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      setTimeout(function() {
+        self.serialize(record, options).then(function(payload) {
+          data[root] = payload;
+        }).then(resolve, reject);
+      }, 0);
+    });
   },
 
   /**
@@ -90,6 +109,8 @@ DS.ActiveModelSerializer = DS.RESTSerializer.extend({
         belongsTo = get(record, key);
     key = this.keyForAttribute(key);
     json[key + "_type"] = Ember.String.capitalize(belongsTo.constructor.typeKey);
+
+    return Ember.RSVP.resolve();
   },
 
   // EXTRACT

@@ -719,7 +719,15 @@ DS.RESTSerializer = DS.JSONSerializer.extend({
     @param {Object} options
   */
   serializeIntoHash: function(hash, type, record, options) {
-    hash[type.typeKey] = this.serialize(record, options);
+    var self = this;
+
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      setTimeout(function() {
+        self.serialize(record, options).then(function(payload) {
+          hash[type.typeKey] = payload;
+        }).then(resolve, reject);
+      }, 0);
+    });
   },
 
   /**
@@ -737,5 +745,7 @@ DS.RESTSerializer = DS.JSONSerializer.extend({
         belongsTo = get(record, key);
     key = this.keyForAttribute ? this.keyForAttribute(key) : key;
     json[key + "Type"] = belongsTo.constructor.typeKey;
+
+    return Ember.RSVP.resolve();
   }
 });

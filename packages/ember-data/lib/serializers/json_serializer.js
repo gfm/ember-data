@@ -30,45 +30,60 @@ DS.JSONSerializer = Ember.Object.extend({
   // SERIALIZE
 
   serialize: function(record, options) {
-    var json = {};
+    var self = this;
 
-    if (options && options.includeId) {
-      var id = get(record, 'id');
+    return new Ember.RSVP.Promise(function(resolve, reject) {
+      var json = {};
 
-      if (id) {
-        json[get(this, 'primaryKey')] = get(record, 'id');
+      if (options && options.includeId) {
+        var id = get(record, 'id');
+
+        if (id) {
+          json[get(self, 'primaryKey')] = get(record, 'id');
+        }
       }
-    }
 
-    record.eachAttribute(function(key, attribute) {
-      this.serializeAttribute(record, json, key, attribute);
-    }, this);
+      var promises = [];
 
-    record.eachRelationship(function(key, relationship) {
-      if (relationship.kind === 'belongsTo') {
-        this.serializeBelongsTo(record, json, relationship);
-      } else if (relationship.kind === 'hasMany') {
-        this.serializeHasMany(record, json, relationship);
-      }
-    }, this);
+      record.eachAttribute(function(key, attribute) {
+        promises.push(self.serializeAttribute(record, json, key, attribute));
+      }, self);
 
-    return json;
+      record.eachRelationship(function(key, relationship) {
+        if (relationship.kind === 'belongsTo') {
+          promises.push(self.serializeBelongsTo(record, json, relationship));
+        } else if (relationship.kind === 'hasMany') {
+          promises.push(self.serializeHasMany(record, json, relationship));
+        }
+      }, self);
+
+      return Ember.RSVP.all(promises).
+                        then(function() { return json; }).
+                        then(resolve, reject);
+    });
   },
 
   serializeAttribute: function(record, json, key, attribute) {
-    var attrs = get(this, 'attrs');
-    var value = get(record, key), type = attribute.type;
+    var attrs = get(this, 'attrs'),
+        promise,
+        self = this,
+        value = get(record, key), type = attribute.type;
 
     if (type) {
       var transform = this.transformFor(type);
-      value = transform.serialize(value);
+      promise = Ember.RSVP.resolve(transform.serialize(value));
+    } else {
+      promise = Ember.RSVP.resolve(value);
     }
 
-    // if provided, use the mapping provided by `attrs` in
-    // the serializer
-    key = attrs && attrs[key] || (this.keyForAttribute ? this.keyForAttribute(key) : key);
+    return promise.then(function(value) {
+      // if provided, use the mapping provided by `attrs` in
+      // the serializer
+      key = attrs && attrs[key] ||
+            (self.keyForAttribute ? self.keyForAttribute(key) : key);
 
-    json[key] = value;
+      json[key] = value;
+    });
   },
 
   serializeBelongsTo: function(record, json, relationship) {
@@ -85,8 +100,10 @@ DS.JSONSerializer = Ember.Object.extend({
     }
 
     if (relationship.options.polymorphic) {
-      this.serializePolymorphicType(record, json, relationship);
+      return Ember.RSVP.resolve(this.serializePolymorphicType(record, json, relationship));
     }
+
+    return Ember.RSVP.resolve();
   },
 
   serializeHasMany: function(record, json, relationship) {
@@ -98,6 +115,8 @@ DS.JSONSerializer = Ember.Object.extend({
       json[key] = get(record, key).mapBy('id');
       // TODO support for polymorphic manyToNone and manyToMany relationships
     }
+
+    return Ember.RSVP.resolve();
   },
 
   /**

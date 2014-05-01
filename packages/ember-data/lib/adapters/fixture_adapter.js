@@ -89,7 +89,9 @@ DS.FixtureAdapter = DS.Adapter.extend({
     @param  record
   */
   mockJSON: function(store, type, record) {
-    return store.serializerFor(type).serialize(record, { includeId: true });
+    return store.serializerFor(type).
+                 serialize(record, { includeId: true }).
+                 then(function(json) { return json; });
   },
 
   /**
@@ -191,13 +193,15 @@ DS.FixtureAdapter = DS.Adapter.extend({
     @param  record
   */
   createRecord: function(store, type, record) {
-    var fixture = this.mockJSON(store, type, record);
+    var self = this;
 
-    this.updateFixtures(type, fixture);
+    return this.mockJSON(store, type, record).then(function(fixture) {
+      self.updateFixtures(type, fixture);
 
-    return this.simulateRemoteCall(function() {
-      return fixture;
-    }, this);
+      return self.simulateRemoteCall(function() {
+        return fixture;
+      }, self);
+    });
   },
 
   /**
@@ -207,13 +211,15 @@ DS.FixtureAdapter = DS.Adapter.extend({
     @param  record
   */
   updateRecord: function(store, type, record) {
-    var fixture = this.mockJSON(store, type, record);
+    var self = this;
 
-    this.updateFixtures(type, fixture);
+    return this.mockJSON(store, type, record).then(function(fixture) {
+      self.updateFixtures(type, fixture);
 
-    return this.simulateRemoteCall(function() {
-      return fixture;
-    }, this);
+      return self.simulateRemoteCall(function() {
+        return fixture;
+      }, self);
+    });
   },
 
   /**
@@ -223,13 +229,15 @@ DS.FixtureAdapter = DS.Adapter.extend({
     @param  record
   */
   deleteRecord: function(store, type, record) {
-    var fixture = this.mockJSON(store, type, record);
+    var self = this;
 
-    this.deleteLoadedFixture(type, fixture);
+    return this.mockJSON(store, type, record).then(function(fixture) {
+      self.deleteLoadedFixture(type, fixture);
 
-    return this.simulateRemoteCall(function() {
-      // no payload in a deletion
-      return null;
+      return self.simulateRemoteCall(function() {
+        // no payload in a deletion
+        return null;
+      });
     });
   },
 
