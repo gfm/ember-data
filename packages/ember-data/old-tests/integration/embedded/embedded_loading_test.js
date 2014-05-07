@@ -325,7 +325,7 @@ test("A nested belongsTo relationship can be marked as embedded via the `map` AP
     strictEqual(comment.get('user.group'), group, "relationship references the globally addressable record");
 });
 
-test("updating a embedded record with a belongsTo relationship is serialize correctly.", function() {
+asyncTest("updating a embedded record with a belongsTo relationship is serialize correctly.", function() {
     Adapter.map(Comment, {
       user: { embedded: 'load' }
     });
@@ -361,8 +361,21 @@ test("updating a embedded record with a belongsTo relationship is serialize corr
     comment.set('user', peter);
     strictEqual(comment.get('user'), peter, "updated relationship references the globally addressable record");
 
-    var commentJSON = serializer.serialize(comment, { includeId: true });
-    deepEqual(commentJSON, { id: 1, post_id: null, user: { id: 4, name: "Peter Pan", group: null }});
+    serializer.serialize(comment, { includeId: true }).
+               then(function(commentJSON) {
+
+      deepEqual(commentJSON, {
+        id: 1,
+        post_id: null,
+        user: {
+          id: 4,
+          name: "Peter Pan",
+          group: null
+        }
+      });
+
+      start();
+  });
 });
 
 test("sideloading a record with an embedded hasMany relationship", function() {

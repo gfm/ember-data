@@ -57,7 +57,7 @@ module("DS.JSONSerializer - Mapping API", {
   }
 });
 
-test("Mapped attributes should be used when serializing a record to JSON.", function() {
+asyncTest("Mapped attributes should be used when serializing a record to JSON.", function() {
   Person.attributes = { firstName: 'string' };
   window.Address.attributes = { firstName: 'string' };
 
@@ -77,12 +77,20 @@ test("Mapped attributes should be used when serializing a record to JSON.", func
     firstName: "Spruce"
   });
 
-  deepEqual(serializer.serialize(person), {
-    FIRST_NAME: "Tom"
-  });
+  Ember.RSVP.all([
+    serializer.serialize(person).then(function(json) {
+      deepEqual(json, {
+        FIRST_NAME: "Tom"
+      });
+    }),
 
-  deepEqual(serializer.serialize(address), {
-    first_name: "Spruce"
+    serializer.serialize(address).then(function(json) {
+      deepEqual(json, {
+        first_name: "Spruce"
+      });
+    })
+  ]).then(function() {
+    start();
   });
 });
 
@@ -108,7 +116,7 @@ test("Mapped attributes should be used when materializing a record from JSON.", 
   deepEqual(address.get('materializedAttributes'), { firstName: "Spruce" });
 });
 
-test("Mapped relationships should be used when serializing a record to JSON.", function() {
+asyncTest("Mapped relationships should be used when serializing a record to JSON.", function() {
   expect(8);
 
   Person.relationships = { addresses: { key: 'addresses', kind: 'hasMany', type: window.Address }};
@@ -151,11 +159,15 @@ test("Mapped relationships should be used when serializing a record to JSON.", f
     });
   };
 
-  serializer.serialize(person);
-  serializer.serialize(address);
+  Ember.RSVP.all([
+    serializer.serialize(person),
+    serializer.serialize(address)
+  ]).then(function() {
+    start();
+  });
 });
 
-test("the id of a belongsTo relationship is serialized by using #serializeId", function() {
+asyncTest("the id of a belongsTo relationship is serialized by using #serializeId", function() {
   Person.relationships = { addresses: { key: 'addresses', kind: 'hasMany', type: window.Address }};
   window.Address.relationships = { person: { key: 'person', kind: 'belongsTo', type: Person }};
 
@@ -168,8 +180,12 @@ test("the id of a belongsTo relationship is serialized by using #serializeId", f
     return 'serialized_' + id;
   };
 
-  deepEqual(serializer.serialize(address), {
-    'person': 'serialized_1'
+  serializer.serialize(address).then(function(json) {
+    deepEqual(json, {
+      'person': 'serialized_1'
+    });
+
+    start();
   });
 });
 
@@ -205,7 +221,7 @@ test("mapped relationships are respected when materializing a record from JSON",
   });
 });
 
-test("mapped primary keys are respected when serializing a record to JSON", function() {
+asyncTest("mapped primary keys are respected when serializing a record to JSON", function() {
   serializer.configure(Person, {
     primaryKey: '__id__'
   });
@@ -217,11 +233,17 @@ test("mapped primary keys are respected when serializing a record to JSON", func
   var person = Person.create({ id: 1 });
   var address = window.Address.create({ id: 2 });
 
-  var personJSON = serializer.serialize(person, { includeId: true });
-  var addressJSON = serializer.serialize(address, { includeId: true });
+  Ember.RSVP.all([
+    serializer.serialize(person, { includeId: true }).then(function(json) {
+      deepEqual(json, { __id__: 1 });
+    }),
 
-  deepEqual(personJSON, { __id__: 1 });
-  deepEqual(addressJSON, { ID: 2 });
+    serializer.serialize(address, { includeId: true }).then(function(json) {
+      deepEqual(json, { ID: 2 });
+    })
+  ]).then(function() {
+    start();
+  });
 });
 
 test("mapped primary keys are respected when materializing a record from JSON", function() {

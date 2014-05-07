@@ -71,29 +71,35 @@ module("integration/active_model - ActiveModelSerializer", {
   }
 });
 
-test("serialize", function() {
+asyncTest("serialize", function() {
   league = env.store.createRecord(HomePlanet, { name: "Villain League", id: "123" });
   var tom           = env.store.createRecord(SuperVillain, { firstName: "Tom", lastName: "Dale", homePlanet: league });
 
-  var json = env.amsSerializer.serialize(tom);
+  env.amsSerializer.serialize(tom).then(function(json) {
+    deepEqual(json, {
+      first_name:       "Tom",
+      last_name:        "Dale",
+      home_planet_id: get(league, "id")
+    });
 
-  deepEqual(json, {
-    first_name:       "Tom",
-    last_name:        "Dale",
-    home_planet_id: get(league, "id")
+    start();
   });
 });
 
-test("serializeIntoHash", function() {
+asyncTest("serializeIntoHash", function() {
   league = env.store.createRecord(HomePlanet, { name: "Umber", id: "123" });
   var json = {};
 
-  env.amsSerializer.serializeIntoHash(json, HomePlanet, league);
+  env.amsSerializer.serializeIntoHash(json, HomePlanet, league).
+                    then(function() {
 
-  deepEqual(json, {
-    home_planet: {
-      name:   "Umber"
-    }
+    deepEqual(json, {
+      home_planet: {
+        name:   "Umber"
+      }
+    });
+
+    start();
   });
 });
 
@@ -414,20 +420,22 @@ test("extractArray with embedded objects of same type, but from separate attribu
   equal(env.store.recordForId("unit", "6").get("name"), "Unit 6", "Secondary records found in the store");
 });
 
-test("serialize polymorphic", function() {
+asyncTest("serialize polymorphic", function() {
   var tom = env.store.createRecord(YellowMinion,   {name: "Alex", id: "124"});
   var ray = env.store.createRecord(DoomsdayDevice, {evilMinion: tom, name: "DeathRay"});
 
-  var json = env.amsSerializer.serialize(ray);
+  env.amsSerializer.serialize(ray).then(function(json) {
+    deepEqual(json, {
+      name:  "DeathRay",
+      evil_minion_type: "YellowMinion",
+      evil_minion_id: "124"
+    });
 
-  deepEqual(json, {
-    name:  "DeathRay",
-    evil_minion_type: "YellowMinion",
-    evil_minion_id: "124"
+    start();
   });
 });
 
-test("serialize with embedded objects", function() {
+asyncTest("serialize with embedded objects", function() {
   league = env.store.createRecord(HomePlanet, { name: "Villain League", id: "123" });
   var tom = env.store.createRecord(SuperVillain, { firstName: "Tom", lastName: "Dale", homePlanet: league });
 
@@ -438,16 +446,18 @@ test("serialize with embedded objects", function() {
   }));
   var serializer = env.container.lookup("serializer:homePlanet");
 
-  var json = serializer.serialize(league);
+  serializer.serialize(league).then(function(json) {
+    deepEqual(json, {
+      name: "Villain League",
+      villains: [{
+        id: get(tom, "id"),
+        first_name: "Tom",
+        last_name: "Dale",
+        home_planet_id: get(league, "id")
+      }]
+    });
 
-  deepEqual(json, {
-    name: "Villain League",
-    villains: [{
-      id: get(tom, "id"),
-      first_name: "Tom",
-      last_name: "Dale",
-      home_planet_id: get(league, "id")
-    }]
+    start();
   });
 });
 

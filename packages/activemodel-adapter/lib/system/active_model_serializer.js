@@ -50,7 +50,7 @@ DS.ActiveModelSerializer = DS.RESTSerializer.extend({
     var key   = relationship.key,
         attrs = get(this, 'attrs'),
         embed = attrs && attrs[key] && attrs[key].embedded === 'always',
-        primaryKey = get(this, 'primaryKey');
+        primaryKey = get(this, 'primaryKey'),
         self = this;
 
     if (embed) {

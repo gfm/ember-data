@@ -28,7 +28,7 @@ module("Record Attribute Transforms", {
   }
 });
 
-test("transformed values should be materialized on the record", function() {
+asyncTest("transformed values should be materialized on the record", function() {
   var Person = DS.Model.extend({
     name: DS.attr('unobtainium')
   });
@@ -38,8 +38,10 @@ test("transformed values should be materialized on the record", function() {
   var person = store.find(Person, 1);
   equal(person.get('name'), 'fromData', "value of attribute on the record should be transformed");
 
-  var json = adapter.serialize(person);
-  equal(json.name, "serialize", "value of attribute in the JSON hash should be transformed");
+  adapter.serialize(person).then(function(json) {
+    equal(json.name, "serialize", "value of attribute in the JSON hash should be transformed");
+    start();
+  });
 });
 
 module("Default DS.Transforms", {
@@ -154,16 +156,17 @@ module("Enum Transforms", {
   }
 });
 
-test("correct transforms are applied", function() {
-  var json, person;
+asyncTest("correct transforms are applied", function() {
   store.load(Person, {
     id: 1,
     material: 2
   });
   
-  person = store.find(Person, 1);
+  var person = store.find(Person, 1);
   equal(person.get('material'), 'veryobtainium', 'value of the attribute on the record should be transformed');
   
-  json = adapter.serialize(person);
-  equal(json.material, 2, 'value of the attribute in the JSON hash should be transformed');
+  adapter.serialize(person).then(function(json) {
+    equal(json.material, 2, 'value of the attribute in the JSON hash should be transformed');
+    start();
+  });
 });

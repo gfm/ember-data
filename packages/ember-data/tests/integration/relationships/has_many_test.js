@@ -123,8 +123,12 @@ test("An updated `links` value should invalidate a relationship cache", function
   });
 
   env.adapter.createRecord = function(store, type, record) {
-    var data = record.serialize();
-    return Ember.RSVP.resolve({ id: 1, links: { comments: "/posts/1/comments" } });
+    return record.serialize().then(function(data) {
+      return Ember.RSVP.resolve({
+        id: 1,
+        links: { comments: "/posts/1/comments" }
+      });
+    });
   };
 
   env.adapter.findHasMany = function(store, record, link, relationship) {

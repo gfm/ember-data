@@ -301,7 +301,9 @@ var convertsWhenSet = function(type, provided, expected) {
   testStore.push(Model, { id: 2 });
   var record = testStore.find('model', 2).then(async(function(record) {
     set(record, 'name', provided);
-    deepEqual(record.serialize().name, expected, type + " saves " + provided + " as " + expected);
+    record.serialize().then(async(function(json) {
+      deepEqual(json.name, expected, type + " saves " + provided + " as " + expected);
+    }));
   }));
 };
 
@@ -385,12 +387,16 @@ test("ensure model exits loading state, materializes data and fulfills promise o
   }));
 });
 
-test("A DS.Model can be JSONified", function() {
+asyncTest("A DS.Model can be JSONified", function() {
   var Person = DS.Model.extend({
     name: DS.attr('string')
   });
 
   var store = createStore({ person: Person });
   var record = store.createRecord('person', { name: "TomHuda" });
-  deepEqual(record.toJSON(), { name: "TomHuda" });
+
+  record.toJSON().then(function(json) {
+    deepEqual(json, { name: "TomHuda" });
+    start();
+  });
 });

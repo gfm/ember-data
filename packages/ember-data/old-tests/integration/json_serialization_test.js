@@ -17,7 +17,7 @@ module("Adapter serialization with attributes only", {
   }
 });
 
-test("calling serialize with a record invokes addAttributes", function() {
+asyncTest("calling serialize with a record invokes addAttributes", function() {
   post = store.createRecord(Post, { title: "Ohai" });
 
   serializer.addAttributes = function(hash, record) {
@@ -26,12 +26,13 @@ test("calling serialize with a record invokes addAttributes", function() {
     });
   };
 
-  var json = serializer.serialize(post);
-
-  deepEqual(json, { title: "Ohai" });
+  serializer.serialize(post).then(function(json) {
+    deepEqual(json, { title: "Ohai" });
+    start();
+  });
 });
 
-test("by default, addAttributes calls keyForAttributeName", function() {
+asyncTest("by default, addAttributes calls keyForAttributeName", function() {
   expect(2);
 
   post = store.createRecord(Post, { title: "Ohai" });
@@ -43,31 +44,35 @@ test("by default, addAttributes calls keyForAttributeName", function() {
     return "__" + name + "__";
   };
 
-  serializer.serialize(post);
+  serializer.serialize(post).then(function(json) {
+    start();
+  });
 });
 
-test("the default addAttributes uses a specified defaultValue", function() {
+asyncTest("the default addAttributes uses a specified defaultValue", function() {
   Post.reopen({
     body: DS.attr('string', { defaultValue: 'FIRST' })
   });
 
   post = store.createRecord(Post, { title: "Ohai" });
 
-  var json = serializer.serialize(post);
-
-  deepEqual(json, { title: "Ohai", body: "FIRST" });
+  serializer.serialize(post).then(function(json) {
+    deepEqual(json, { title: "Ohai", body: "FIRST" });
+    start();
+  });
 });
 
-test("the default addAttributes calls transform", function() {
+asyncTest("the default addAttributes calls transform", function() {
   serializer.serializeValue = function(value, attributeType) {
     return value.toUpperCase();
   };
 
   post = store.createRecord(Post, { title: "Ohai" });
 
-  var json = serializer.serialize(post);
-
-  deepEqual(json, { title: "OHAI" });
+  serializer.serialize(post).then(function(json) {
+    deepEqual(json, { title: "OHAI" });
+    start();
+  });
 });
 
 module("Adapter serialization with an ID", {
@@ -84,18 +89,19 @@ module("Adapter serialization with an ID", {
   }
 });
 
-test("calling serialize with a record and includeId: true invokes addId", function() {
+asyncTest("calling serialize with a record and includeId: true invokes addId", function() {
   serializer.addId = function(hash, type, id) {
     hash.__id__ = id;
   };
 
   var post = store.createRecord(Post, { id: "EWOT" });
-  var json = serializer.serialize(post, { includeId: true });
-
-  deepEqual(json, { __id__: "EWOT" });
+  serializer.serialize(post, { includeId: true }).then(function(json) {
+    deepEqual(json, { __id__: "EWOT" });
+    start();
+  });
 });
 
-test("by default, addId calls primaryKey", function() {
+asyncTest("by default, addId calls primaryKey", function() {
   expect(2);
 
   serializer.primaryKey = function(type) {
@@ -104,9 +110,10 @@ test("by default, addId calls primaryKey", function() {
   };
 
   var post = store.createRecord(Post, { id: "EWOT" });
-  var json = serializer.serialize(post, { includeId: true });
-
-  deepEqual(json, { __key__: "EWOT" });
+  serializer.serialize(post, { includeId: true }).then(function(json) {
+    deepEqual(json, { __key__: "EWOT" });
+    start();
+  });
 });
 
 var Comment, comment;
@@ -141,34 +148,40 @@ module("Adapter serialization with relationships", {
   }
 });
 
-test("calling serialize with a record with relationships invokes addRelationships", function() {
+asyncTest("calling serialize with a record with relationships invokes addRelationships", function() {
   expect(1);
 
   serializer.addRelationships = function(hash, record) {
     equal(record, post);
   };
 
-  serializer.serialize(post);
+  serializer.serialize(post).then(function() {
+    start();
+  });
 });
 
-test("the default addRelationships calls addBelongsTo", function() {
+asyncTest("the default addRelationships calls addBelongsTo", function() {
   serializer.addBelongsTo = function(hash, record, key, relationship) {
     equal(relationship.kind, "belongsTo");
     equal(key, 'post');
     equal(record, comment);
   };
 
-  serializer.serialize(comment);
+  serializer.serialize(comment).then(function() {
+    start();
+  });
 });
 
-test("the default addRelationships calls addHasMany", function() {
+asyncTest("the default addRelationships calls addHasMany", function() {
   serializer.addHasMany = function(hash, record, key, relationship) {
     equal(relationship.kind, "hasMany");
     equal(key, 'comments');
     equal(record, post);
   };
 
-  serializer.serialize(post);
+  serializer.serialize(post).then(function() {
+    start();
+  });
 });
 
 test("loadValue should be called once per sideloaded type", function() {

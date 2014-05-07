@@ -134,17 +134,19 @@ test("The store can load an embedded polymorphic hasMany association", function(
   deepEqual(user.get('messages').toArray(), [message]);
 });
 
-test("The store can serialize an embedded polymorphic belongsTo association", function() {
+asyncTest("The store can serialize an embedded polymorphic belongsTo association", function() {
   serializer.keyForEmbeddedType = function() {
     return 'embeddedType';
   };
   adapter.load(store, App.User, { id: 2, messages: [{ id: 1, embeddedType: 'comment'}]});
 
-  var user = store.find(App.User, 2),
-      serialized = store.serialize(user, {includeId: true});
+  var user = store.find(App.User, 2);
 
-  ok(serialized.hasOwnProperty('messages'));
-  equal(serialized.messages.length, 1, "The messages are serialized");
-  equal(serialized.messages[0].id, 1);
-  equal(serialized.messages[0].embeddedType, 'comment');
+  store.serialize(user, {includeId: true}).then(function(serialized) {
+    ok(serialized.hasOwnProperty('messages'));
+    equal(serialized.messages.length, 1, "The messages are serialized");
+    equal(serialized.messages[0].id, 1);
+    equal(serialized.messages[0].embeddedType, 'comment');
+    start();
+  });
 });

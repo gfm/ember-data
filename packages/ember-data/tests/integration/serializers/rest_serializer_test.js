@@ -72,16 +72,17 @@ test("extractArray with custom typeForRoot", function() {
   }));
 });
 
-test("serialize polymorphicType", function() {
+asyncTest("serialize polymorphicType", function() {
   var tom = env.store.createRecord(YellowMinion,   {name: "Alex", id: "124"});
   var ray = env.store.createRecord(DoomsdayDevice, {evilMinion: tom, name: "DeathRay"});
 
-  var json = env.restSerializer.serialize(ray);
-
-  deepEqual(json, {
-    name:  "DeathRay",
-    evilMinionType: "yellowMinion",
-    evilMinion: "124"
+  env.restSerializer.serialize(ray).then(function(json) {
+    deepEqual(json, {
+      name:  "DeathRay",
+      evilMinionType: "yellowMinion",
+      evilMinion: "124"
+    });
+    start();
   });
 });
 
